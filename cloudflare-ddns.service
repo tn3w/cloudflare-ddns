@@ -1,0 +1,28 @@
+[Unit]
+Description=Cloudflare DDNS IP Updater
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cloudflare-ddns
+Group=cloudflare-ddns
+ExecStart=/usr/local/bin/cloudflare-ddns --config /etc/cloudflare-ddns/config.toml
+Restart=always
+RestartSec=30
+
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+RestrictNamespaces=true
+ReadWritePaths=/var/log/cloudflare-ddns
+CapabilityBoundingSet=
+ProtectKernelTunables=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+PrivateDevices=true
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target
