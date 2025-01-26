@@ -17,7 +17,9 @@ impl fmt::Display for ConfigError {
         match self {
             ConfigError::IoError(e) => write!(f, "IO error: {}", e),
             ConfigError::TomlError(e) => write!(f, "TOML parsing error: {}", e),
-            ConfigError::MissingField(field) => write!(f, "{} is required (use --{} or config file)", field, field),
+            ConfigError::MissingField(field) => {
+                write!(f, "{} is required (use --{} or config file)", field, field)
+            }
         }
     }
 }
@@ -41,16 +43,8 @@ struct FileConfig {
     records: Vec<String>,
 }
 
-const LOGO: &str = r#"
-  ____ _____   ____  ____  _   _ ____
- / ___|  ___| |  _ \|  _ \| \ | / ___|
-| |   | |_    | | | | | | |  \| \___ \
-| |___|  _|   | |_| | |_| | |\  |___) |
- \____|_|     |____/|____/|_| \_|____/
-"#;
-
 #[derive(Debug, Parser)]
-#[command(author, version, about = format!("{LOGO}\nAutomatically update Cloudflare A records when your IP changes"))]
+#[command(author, version)]
 pub struct Config {
     /// Path to config file (optional if all other args are provided)
     #[arg(short = 'c', long)]
@@ -81,11 +75,10 @@ impl Config {
 
         let config_path = args.config.as_deref().or(config_path);
         if let Some(path) = config_path {
-            let content = fs::read_to_string(path)
-                .map_err(|e| ConfigError::IoError(e))?;
+            let content = fs::read_to_string(path).map_err(|e| ConfigError::IoError(e))?;
 
-            let file_config: FileConfig = toml::from_str(&content)
-                .map_err(|e| ConfigError::TomlError(e))?;
+            let file_config: FileConfig =
+                toml::from_str(&content).map_err(|e| ConfigError::TomlError(e))?;
 
             if args.auth_email.is_none() {
                 args.auth_email = Some(file_config.auth_email);

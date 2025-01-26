@@ -14,7 +14,9 @@ pub enum CloudflareError {
 impl fmt::Display for CloudflareError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CloudflareError::ApiError(msg, code) => write!(f, "Cloudflare API error: {} (code: {})", msg, code),
+            CloudflareError::ApiError(msg, code) => {
+                write!(f, "Cloudflare API error: {} (code: {})", msg, code)
+            }
             CloudflareError::RequestError(e) => write!(f, "Request error: {}", e),
             CloudflareError::UnknownError => write!(f, "Unknown error"),
         }
@@ -62,6 +64,16 @@ struct UpdateDnsRecord {
     record_type: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct UpdateResponse {
+    success: bool,
+    errors: Vec<CloudflareResponseError>,
+}
+
+fn is_global_api_key(key: &str) -> bool {
+    key.len() == 37 && key.chars().all(|c| c.is_ascii_hexdigit())
+}
+
 pub async fn get_dns_record(
     auth_email: &str,
     auth_key: &str,
@@ -76,11 +88,18 @@ pub async fn get_dns_record(
 
     debug!("Fetching DNS record for {}", record_name);
 
-    let response: CloudflareResponse<DnsRecord> = client
+    let mut request = client
         .get(&url)
         .query(&[("type", "A"), ("name", record_name)])
-        .header("X-Auth-Email", auth_email)
-        .header("Authorization", format!("Bearer {}", auth_key))
+        .header("X-Auth-Email", auth_email);
+
+    request = if is_global_api_key(auth_key) {
+        request.header("X-Auth-Key", auth_key)
+    } else {
+        request.header("Authorization", format!("Bearer {}", auth_key))
+    };
+
+    let response: CloudflareResponse<DnsRecord> = request
         .send()
         .await
         .map_err(CloudflareError::RequestError)?
@@ -89,9 +108,11 @@ pub async fn get_dns_record(
         .map_err(CloudflareError::RequestError)?;
 
     if !response.success {
-        let error = response.errors.first().map(|e| {
-            CloudflareError::ApiError(e.message.clone(), e.code)
-        }).unwrap_or(CloudflareError::UnknownError);
+        let error = response
+            .errors
+            .first()
+            .map(|e| CloudflareError::ApiError(e.message.clone(), e.code))
+            .unwrap_or(CloudflareError::UnknownError);
         return Err(error);
     }
 
@@ -122,11 +143,18 @@ pub async fn update_dns_record(
         record_type: "A".to_string(),
     };
 
-    let response: CloudflareResponse<DnsRecord> = client
+    let mut request = client
         .put(&url)
         .header("X-Auth-Email", auth_email)
-        .header("Authorization", format!("Bearer {}", auth_key))
-        .json(&update_data)
+        .json(&update_data);
+
+    request = if is_global_api_key(auth_key) {
+        request.header("X-Auth-Key", auth_key)
+    } else {
+        request.header("Authorization", format!("Bearer {}", auth_key))
+    };
+
+    let response: UpdateResponse = request
         .send()
         .await
         .map_err(CloudflareError::RequestError)?
@@ -135,9 +163,11 @@ pub async fn update_dns_record(
         .map_err(CloudflareError::RequestError)?;
 
     if !response.success {
-        let error = response.errors.first().map(|e| {
-            CloudflareError::ApiError(e.message.clone(), e.code)
-        }).unwrap_or(CloudflareError::UnknownError);
+        let error = response
+            .errors
+            .first()
+            .map(|e| CloudflareError::ApiError(e.message.clone(), e.code))
+            .unwrap_or(CloudflareError::UnknownError);
         return Err(error);
     }
 
