@@ -1,8 +1,8 @@
-use log::debug;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fmt;
+use std::time::Duration;
 
 #[derive(Debug)]
 pub enum CloudflareError {
@@ -86,10 +86,9 @@ pub async fn get_dns_record(
         zone_id
     );
 
-    debug!("Fetching DNS record for {}", record_name);
-
     let mut request = client
         .get(&url)
+        .timeout(Duration::from_secs(10))
         .query(&[("type", "A"), ("name", record_name)])
         .header("X-Auth-Email", auth_email);
 
@@ -133,8 +132,6 @@ pub async fn update_dns_record(
         zone_id, record_id
     );
 
-    debug!("Updating DNS record {} with IP {}", record.name, new_ip);
-
     let update_data = UpdateDnsRecord {
         content: new_ip.to_string(),
         name: record.name.clone(),
@@ -145,6 +142,7 @@ pub async fn update_dns_record(
 
     let mut request = client
         .put(&url)
+        .timeout(Duration::from_secs(10))
         .header("X-Auth-Email", auth_email)
         .json(&update_data);
 
