@@ -21,7 +21,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", LOGO);
 
     let config = config::Config::load(None)?;
-    println!("Starting IP check loop with {} seconds interval", config.reload_interval);
+    println!(
+        "Starting IP check loop with {} seconds interval",
+        config.reload_interval
+    );
 
     loop {
         match ip::get_ip().await {
@@ -48,8 +51,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 .await
                                 {
                                     Ok(_) => {
-                                        println!("Updated {} from {} to {}", 
-                                            record.name, record.content, current_ip);
+                                        println!(
+                                            "Updated {} from {} to {}",
+                                            record.name, record.content, current_ip
+                                        );
                                     }
                                     Err(_) => {}
                                 }

@@ -46,7 +46,7 @@ async fn fetch_ip(url: &str) -> Result<String, IpError> {
         .map_err(IpError::RequestError)?
         .trim()
         .to_string();
-    
+
     if is_valid_ipv4(&ip) {
         Ok(ip)
     } else {
@@ -63,14 +63,13 @@ pub async fn get_ip() -> Result<String, IpError> {
         "https://ipapi.co/ip",
         "https://myip.wtf/text",
     ];
-    
+
     for service in services {
         match fetch_ip(service).await {
             Ok(ip) => return Ok(ip),
-            Err(_) => {
-            }
+            Err(_) => {}
         }
     }
-    
+
     Err(IpError::NoValidIpFound)
 }
